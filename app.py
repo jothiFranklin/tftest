@@ -1,44 +1,51 @@
 import os
+import time
 from fastapi import FastAPI
 
 app = FastAPI()
 
-SECRET = os.getenv("MY_SECRET", "SECRET_NOT_FOUND")
+# Read environment variables
+MODE = os.getenv("MODE", "helloworld")
+MY_SECRET = os.getenv("MY_SECRET", "SECRET_NOT_FOUND")
 VOLUME_PATH = "/mnt/data"
-FILE_PATH = f"{VOLUME_PATH}/data.txt"
+FILE_NAME = "test.txt"
+FILE_PATH = os.path.join(VOLUME_PATH, FILE_NAME)
 
-@app.get("/")
-def hello():
-    return {"message": "Hello World"}
+# Service 1 — Print Secret
+if MODE == "print-secret":
+    print("Secret value:", MY_SECRET)
+    time.sleep(3600)
 
-def print_secret():
-    print("Secret value:", SECRET)
-
-def write_volume():
+# Service 2 — Write File to Volume
+elif MODE == "write-volume":
     os.makedirs(VOLUME_PATH, exist_ok=True)
     with open(FILE_PATH, "w") as f:
-        f.write("Hello from volume")
-    print("Written file to volume")
+        f.write("Hello from persistent volume!")
+    print("File created in volume:", FILE_PATH)
+    with open(FILE_PATH) as f:
+        print(f.read())
+    time.sleep(3600)
 
-def read_volume():
-    try:
-        with open(FILE_PATH, "r") as f:
-            print("File content:", f.read())
-    except Exception as e:
-        print("Error reading file:", e)
-
-if __name__ == "__main__":
-    MODE = os.getenv("MODE", "api")
-
-    if MODE == "print-secret":
-        print_secret()
-
-    elif MODE == "write-volume":
-        write_volume()
-
-    elif MODE == "read-volume":
-        read_volume()
-
+# Service 3 — Read File from Volume
+elif MODE == "read-volume":
+    if os.path.exists(FILE_PATH):
+        with open(FILE_PATH) as f:
+            print("File contents:", f.read())
     else:
-        import uvicorn
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        print("File not found in volume!")
+    time.sleep(3600)
+
+# Service 4 — HTTP Endpoint
+elif MODE == "helloworld":
+    print("Secret value on startup:", MY_SECRET)
+
+    @app.get("/")
+    def hello():
+        return {"message": "Hello World"}
+
+    @app.get("/secret")
+    def get_secret():
+        return {"secret": MY_SECRET}
+
+else:
+    print(f"Unknown MODE: {MODE}")
